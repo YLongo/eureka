@@ -51,13 +51,28 @@ public class EurekaClientServerRestIntegrationTest {
 
     private static final Pattern WAR_PATTERN = Pattern.compile("eureka-server.*.war");
 
-    private static EurekaServerConfig eurekaServerConfig;
+    private static EurekaServerConfig eurekaServerConfig = createEurekaServerConfig();
 
     private static Server server;
-    private static TransportClientFactory httpClientFactory;
 
-    private static EurekaHttpClient jerseyEurekaClient;
-    private static JerseyReplicationClient jerseyReplicationClient;
+    private static final ServerCodecs serverCodecs = new DefaultServerCodecs(eurekaServerConfig);
+
+    private static final TransportClientFactory httpClientFactory  = getTestEurekaClient();
+
+    private static JerseyEurekaHttpClientFactory getTestEurekaClient() {
+        return JerseyEurekaHttpClientFactory.newBuilder().withClientName("testEurekaClient")
+                                                         .withConnectionTimeout(1000)
+                                                         .withReadTimeout(1000)
+                                                         .withMaxConnectionsPerHost(1)
+                                                         .withMaxTotalConnections(1)
+                                                         .withConnectionIdleTimeout(1000).build();
+    }
+
+    private static final String eurekaServiceUrl = "http://localhost:8080/v2";
+
+    private static final EurekaHttpClient jerseyEurekaClient = httpClientFactory.newClient(new DefaultEndpoint(eurekaServiceUrl));
+
+    private static final JerseyReplicationClient jerseyReplicationClient = JerseyReplicationClient.createReplicationClient(eurekaServerConfig, serverCodecs, eurekaServiceUrl);
 
     /**
      * We do not include ASG data to prevent server from consulting AWS for its status.
@@ -65,36 +80,17 @@ public class EurekaClientServerRestIntegrationTest {
     private static final InstanceInfoGenerator infoGenerator = InstanceInfoGenerator.newBuilder(10, 2).withAsg(false).build();
     private static final Iterator<InstanceInfo> instanceInfoIt = infoGenerator.serviceIterator();
 
-    private static String eurekaServiceUrl;
-
     @BeforeClass
     public static void setUp() throws Exception {
         injectEurekaConfiguration();
         startServer();
-        createEurekaServerConfig();
-
-        httpClientFactory = JerseyEurekaHttpClientFactory.newBuilder()
-                .withClientName("testEurekaClient")
-                .withConnectionTimeout(1000)
-                .withReadTimeout(1000)
-                .withMaxConnectionsPerHost(1)
-                .withMaxTotalConnections(1)
-                .withConnectionIdleTimeout(1000)
-                .build();
-
-        jerseyEurekaClient = httpClientFactory.newClient(new DefaultEndpoint(eurekaServiceUrl));
-
-        ServerCodecs serverCodecs = new DefaultServerCodecs(eurekaServerConfig);
-        jerseyReplicationClient = JerseyReplicationClient.createReplicationClient(
-                eurekaServerConfig,
-                serverCodecs,
-                eurekaServiceUrl
-        );
     }
 
     @AfterClass
     public static void tearDown() throws Exception {
+
         removeEurekaConfiguration();
+
         if (jerseyReplicationClient != null) {
             jerseyReplicationClient.shutdown();
         }
@@ -232,6 +228,7 @@ public class EurekaClientServerRestIntegrationTest {
     }
 
     private static void startServer() throws Exception {
+        // 先使用gradle clean war将eureka-server打成war包
         File warFile = findWar();
 
         server = new Server(8080);
@@ -243,7 +240,7 @@ public class EurekaClientServerRestIntegrationTest {
 
         server.start();
 
-        eurekaServiceUrl = "http://localhost:8080/v2";
+//        eurekaServiceUrl = "http://localhost:8080/v2";
     }
 
     private static File findWar() {
@@ -265,16 +262,19 @@ public class EurekaClientServerRestIntegrationTest {
                 return WAR_PATTERN.matcher(name).matches();
             }
         });
+
         if (warFiles.length == 0) {
             throw new IllegalStateException("War file not found in directory " + dir);
         }
+
         if (warFiles.length > 1) {
             throw new IllegalStateException("Multiple war files found in directory " + dir + ": " + Arrays.toString(warFiles));
         }
+
         return warFiles[0];
     }
 
-    private static void createEurekaServerConfig() {
+    private static EurekaServerConfig createEurekaServerConfig() {
         eurekaServerConfig = mock(EurekaServerConfig.class);
 
         // Cluster management related
@@ -292,5 +292,7 @@ public class EurekaClientServerRestIntegrationTest {
         when(eurekaServerConfig.getPeerNodeTotalConnections()).thenReturn(1);
         when(eurekaServerConfig.getPeerNodeTotalConnectionsPerHost()).thenReturn(1);
         when(eurekaServerConfig.getPeerNodeConnectionIdleTimeoutSeconds()).thenReturn(1000);
+
+        return eurekaServerConfig;
     }
 }
