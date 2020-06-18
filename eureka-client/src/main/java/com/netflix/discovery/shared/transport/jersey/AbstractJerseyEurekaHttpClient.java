@@ -48,12 +48,12 @@ public abstract class AbstractJerseyEurekaHttpClient implements EurekaHttpClient
         ClientResponse response = null;
         try {
             Builder resourceBuilder = jerseyClient.resource(serviceUrl).path(urlPath).getRequestBuilder();
+
             addExtraHeaders(resourceBuilder);
-            response = resourceBuilder
-                    .header("Accept-Encoding", "gzip")
-                    .type(MediaType.APPLICATION_JSON_TYPE)
-                    .accept(MediaType.APPLICATION_JSON)
-                    .post(ClientResponse.class, info);
+
+            response = resourceBuilder.header("Accept-Encoding", "gzip").type(MediaType.APPLICATION_JSON_TYPE)
+                                      .accept(MediaType.APPLICATION_JSON).post(ClientResponse.class, info);
+
             return anEurekaHttpResponse(response.getStatus()).headers(headersOf(response)).build();
         } finally {
             if (logger.isDebugEnabled()) {

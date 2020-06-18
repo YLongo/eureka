@@ -68,6 +68,7 @@ public class JerseyReplicationClient extends AbstractJerseyEurekaHttpClient impl
                                                   .path(urlPath)
                                                   .queryParam("status", info.getStatus().toString())
                                                   .queryParam("lastDirtyTimestamp", info.getLastDirtyTimestamp().toString());
+
             if (overriddenStatus != null) {
                 webResource = webResource.queryParam("overriddenstatus", overriddenStatus.name());
             }
