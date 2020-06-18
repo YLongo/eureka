@@ -34,12 +34,8 @@ public class DefaultServerCodecs implements ServerCodecs {
 
     @Inject
     public DefaultServerCodecs(EurekaServerConfig serverConfig) {
-        this (
-                getFullJson(serverConfig),
-                CodecWrappers.getCodec(CodecWrappers.JacksonJsonMini.class),
-                getFullXml(serverConfig),
-                CodecWrappers.getCodec(CodecWrappers.JacksonXmlMini.class)
-        );
+        this(getFullJson(serverConfig), CodecWrappers.getCodec(CodecWrappers.JacksonJsonMini.class),
+             getFullXml(serverConfig), CodecWrappers.getCodec(CodecWrappers.JacksonXmlMini.class));
     }
 
     protected DefaultServerCodecs(CodecWrapper fullJsonCodec,

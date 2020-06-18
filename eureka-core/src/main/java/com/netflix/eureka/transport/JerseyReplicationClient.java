@@ -59,23 +59,28 @@ public class JerseyReplicationClient extends AbstractJerseyEurekaHttpClient impl
      */
     @Override
     public EurekaHttpResponse<InstanceInfo> sendHeartBeat(String appName, String id, InstanceInfo info, InstanceStatus overriddenStatus) {
+
         String urlPath = "apps/" + appName + '/' + id;
         ClientResponse response = null;
+
         try {
             WebResource webResource = jerseyClient.getClient().resource(serviceUrl)
-                    .path(urlPath)
-                    .queryParam("status", info.getStatus().toString())
-                    .queryParam("lastDirtyTimestamp", info.getLastDirtyTimestamp().toString());
+                                                  .path(urlPath)
+                                                  .queryParam("status", info.getStatus().toString())
+                                                  .queryParam("lastDirtyTimestamp", info.getLastDirtyTimestamp().toString());
             if (overriddenStatus != null) {
                 webResource = webResource.queryParam("overriddenstatus", overriddenStatus.name());
             }
+
             Builder requestBuilder = webResource.getRequestBuilder();
             addExtraHeaders(requestBuilder);
             response = requestBuilder.accept(MediaType.APPLICATION_JSON_TYPE).put(ClientResponse.class);
             InstanceInfo infoFromPeer = null;
+
             if (response.getStatus() == Status.CONFLICT.getStatusCode() && response.hasEntity()) {
                 infoFromPeer = response.getEntity(InstanceInfo.class);
             }
+
             return anEurekaHttpResponse(response.getStatus(), infoFromPeer).type(MediaType.APPLICATION_JSON_TYPE).build();
         } finally {
             if (logger.isDebugEnabled()) {
@@ -133,6 +138,7 @@ public class JerseyReplicationClient extends AbstractJerseyEurekaHttpClient impl
     }
 
     public static JerseyReplicationClient createReplicationClient(EurekaServerConfig config, ServerCodecs serverCodecs, String serviceUrl) {
+
         String name = JerseyReplicationClient.class.getSimpleName() + ": " + serviceUrl + "apps/: ";
 
         EurekaJerseyClient jerseyClient;
@@ -156,8 +162,8 @@ public class JerseyReplicationClient extends AbstractJerseyEurekaHttpClient impl
                     .withMaxTotalConnections(config.getPeerNodeTotalConnections())
                     .withConnectionIdleTimeout(config.getPeerNodeConnectionIdleTimeoutSeconds());
 
-            if (serviceUrl.startsWith("https://") &&
-                    "true".equals(System.getProperty("com.netflix.eureka.shouldSSLConnectionsUseSystemSocketFactory"))) {
+            if (serviceUrl.startsWith("https://")
+                    && "true".equals(System.getProperty("com.netflix.eureka.shouldSSLConnectionsUseSystemSocketFactory"))) {
                 clientBuilder.withSystemSSLConfiguration();
             }
             jerseyClient = clientBuilder.build();
