@@ -420,6 +420,7 @@ public class InstanceInfo {
          * @return the {@link InstanceInfo} builder.
          */
         public Builder setHostName(String hostName) {
+            
             if (hostName == null || hostName.isEmpty()) {
                 logger.warn("Passed in hostname is blank, not setting it");
                 return this;
@@ -427,10 +428,9 @@ public class InstanceInfo {
 
             String existingHostName = result.hostName;
             result.hostName = hostName;
-            if ((existingHostName != null)
-                    && !(hostName.equals(existingHostName))) {
-                refreshStatusPageUrl().refreshHealthCheckUrl()
-                        .refreshVIPAddress().refreshSecureVIPAddress();
+            
+            if ((existingHostName != null) && !(hostName.equals(existingHostName))) {
+                refreshStatusPageUrl().refreshHealthCheckUrl().refreshVIPAddress().refreshSecureVIPAddress();
             }
             return this;
         }

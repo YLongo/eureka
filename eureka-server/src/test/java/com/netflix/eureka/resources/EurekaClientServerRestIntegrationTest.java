@@ -68,7 +68,7 @@ public class EurekaClientServerRestIntegrationTest {
                                                          .withConnectionIdleTimeout(1000).build();
     }
 
-    private static final String eurekaServiceUrl = "http://localhost:8080/v2";
+    private static String eurekaServiceUrl = "http://localhost:8080/v2";
 
     private static final EurekaHttpClient jerseyEurekaClient = httpClientFactory.newClient(new DefaultEndpoint(eurekaServiceUrl));
 
@@ -229,18 +229,29 @@ public class EurekaClientServerRestIntegrationTest {
 
     private static void startServer() throws Exception {
         // 先使用gradle clean war将eureka-server打成war包
-        File warFile = findWar();
-
+//        File warFile = findWar();
+//
+//        server = new Server(8080);
+//
+//        WebAppContext webapp = new WebAppContext();
+//        webapp.setContextPath("/");
+//        webapp.setWar(warFile.getAbsolutePath());
+//        server.setHandler(webapp);
+//
+//        server.start();
+//
+//        eurekaServiceUrl = "http://localhost:8080/v2";
+        
         server = new Server(8080);
 
-        WebAppContext webapp = new WebAppContext();
-        webapp.setContextPath("/");
-        webapp.setWar(warFile.getAbsolutePath());
-        server.setHandler(webapp);
-
+        WebAppContext webAppCtx = new WebAppContext(new File("./eureka-server/src/main/webapp").getAbsolutePath(), "/");
+        webAppCtx.setDescriptor(new File("./eureka-server/src/main/webapp/WEB-INF/web.xml").getAbsolutePath());
+        webAppCtx.setResourceBase(new File("./eureka-server/src/main/resources").getAbsolutePath());
+        webAppCtx.setClassLoader(Thread.currentThread().getContextClassLoader());
+        
+        server.setHandler(webAppCtx);
         server.start();
-
-//        eurekaServiceUrl = "http://localhost:8080/v2";
+        eurekaServiceUrl = "http://localhost:8080/v2";
     }
 
     private static File findWar() {

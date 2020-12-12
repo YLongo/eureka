@@ -62,7 +62,6 @@ import org.slf4j.LoggerFactory;
  * </p>
  *
  * @author Karthik Ranganathan, Greg Kim, David Liu
- *
  */
 public class EurekaBootStrap implements ServletContextListener {
     private static final Logger logger = LoggerFactory.getLogger(EurekaBootStrap.class);
@@ -82,7 +81,7 @@ public class EurekaBootStrap implements ServletContextListener {
 
     protected volatile EurekaServerContext serverContext;
     protected volatile AwsBinder awsBinder;
-    
+
     private EurekaClient eurekaClient;
 
     /**
@@ -91,10 +90,10 @@ public class EurekaBootStrap implements ServletContextListener {
     public EurekaBootStrap() {
         this(null);
     }
-    
+
     /**
      * Construct an instance of eureka bootstrap with the supplied eureka client
-     * 
+     *
      * @param eurekaClient the eureka client to bootstrap
      */
     public EurekaBootStrap(EurekaClient eurekaClient) {
@@ -104,8 +103,7 @@ public class EurekaBootStrap implements ServletContextListener {
     /**
      * Initializes Eureka, including syncing up with other Eureka peers and publishing the registry.
      *
-     * @see
-     * javax.servlet.ServletContextListener#contextInitialized(javax.servlet.ServletContextEvent)
+     * @see javax.servlet.ServletContextListener#contextInitialized(javax.servlet.ServletContextEvent)
      */
     @Override
     public void contextInitialized(ServletContextEvent event) {
@@ -145,6 +143,8 @@ public class EurekaBootStrap implements ServletContextListener {
      * init hook for server context. Override for custom logic.
      */
     protected void initEurekaServerContext() throws Exception {
+
+        // 读取 eureka-server 中的配置
         EurekaServerConfig eurekaServerConfig = new DefaultEurekaServerConfig();
 
         // For backward compatibility
@@ -157,14 +157,17 @@ public class EurekaBootStrap implements ServletContextListener {
 
         ApplicationInfoManager applicationInfoManager = null;
 
+        // 构造一个 eurekaClient 跟其他 eurekaServer 进行通信
         if (eurekaClient == null) {
+            
             EurekaInstanceConfig instanceConfig = isCloud(ConfigurationManager.getDeploymentContext())
                     ? new CloudInstanceConfig()
                     : new MyDataCenterInstanceConfig();
-            
-            applicationInfoManager = new ApplicationInfoManager(
-                    instanceConfig, new EurekaConfigBasedInstanceInfoProvider(instanceConfig).get());
-            
+
+            InstanceInfo instanceInfo = new EurekaConfigBasedInstanceInfoProvider(instanceConfig).get();
+
+            applicationInfoManager = new ApplicationInfoManager(instanceConfig, instanceInfo);
+
             EurekaClientConfig eurekaClientConfig = new DefaultEurekaClientConfig();
             eurekaClient = new DiscoveryClient(applicationInfoManager, eurekaClientConfig);
         } else {
@@ -172,43 +175,24 @@ public class EurekaBootStrap implements ServletContextListener {
         }
 
         PeerAwareInstanceRegistry registry;
+        EurekaClientConfig eurekaClientConfig = eurekaClient.getEurekaClientConfig();
+
         if (isAws(applicationInfoManager.getInfo())) {
-            registry = new AwsInstanceRegistry(
-                    eurekaServerConfig,
-                    eurekaClient.getEurekaClientConfig(),
-                    serverCodecs,
-                    eurekaClient
-            );
-            awsBinder = new AwsBinderDelegate(eurekaServerConfig, eurekaClient.getEurekaClientConfig(), registry, applicationInfoManager);
+            registry = new AwsInstanceRegistry(eurekaServerConfig, eurekaClientConfig, serverCodecs, eurekaClient);
+            awsBinder = new AwsBinderDelegate(eurekaServerConfig, eurekaClientConfig, registry, applicationInfoManager);
             awsBinder.start();
         } else {
-            registry = new PeerAwareInstanceRegistryImpl(
-                    eurekaServerConfig,
-                    eurekaClient.getEurekaClientConfig(),
-                    serverCodecs,
-                    eurekaClient
-            );
+            registry = new PeerAwareInstanceRegistryImpl(eurekaServerConfig, eurekaClientConfig, serverCodecs, eurekaClient);
         }
 
-        PeerEurekaNodes peerEurekaNodes = getPeerEurekaNodes(
-                registry,
-                eurekaServerConfig,
-                eurekaClient.getEurekaClientConfig(),
-                serverCodecs,
-                applicationInfoManager
-        );
+        PeerEurekaNodes peerEurekaNodes = getPeerEurekaNodes(registry, eurekaServerConfig, eurekaClientConfig, serverCodecs, applicationInfoManager);
 
-        serverContext = new DefaultEurekaServerContext(
-                eurekaServerConfig,
-                serverCodecs,
-                registry,
-                peerEurekaNodes,
-                applicationInfoManager
-        );
+        serverContext = new DefaultEurekaServerContext(eurekaServerConfig, serverCodecs, registry, peerEurekaNodes, applicationInfoManager);
 
         EurekaServerContextHolder.initialize(serverContext);
 
         serverContext.initialize();
+        
         logger.info("Initialized server context");
 
         // Copy registry from neighboring eureka node
@@ -218,17 +202,9 @@ public class EurekaBootStrap implements ServletContextListener {
         // Register all monitoring statistics.
         EurekaMonitors.registerAllStats();
     }
-    
+
     protected PeerEurekaNodes getPeerEurekaNodes(PeerAwareInstanceRegistry registry, EurekaServerConfig eurekaServerConfig, EurekaClientConfig eurekaClientConfig, ServerCodecs serverCodecs, ApplicationInfoManager applicationInfoManager) {
-        PeerEurekaNodes peerEurekaNodes = new PeerEurekaNodes(
-                registry,
-                eurekaServerConfig,
-                eurekaClientConfig,
-                serverCodecs,
-                applicationInfoManager
-        );
-        
-        return peerEurekaNodes;
+        return new PeerEurekaNodes(registry, eurekaServerConfig, eurekaClientConfig, serverCodecs, applicationInfoManager);
     }
 
     /**
