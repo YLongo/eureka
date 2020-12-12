@@ -37,7 +37,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
  * A default implementation of eureka server configuration as required by
  * {@link EurekaServerConfig}.
  *
@@ -57,7 +56,6 @@ import org.slf4j.LoggerFactory;
  * </p>
  *
  * @author Karthik Ranganathan
- *
  */
 @Singleton
 public class DefaultEurekaServerConfig implements EurekaServerConfig {
@@ -97,7 +95,11 @@ public class DefaultEurekaServerConfig implements EurekaServerConfig {
         init();
     }
 
+    /**
+     * 加载 eureka-server.properties 中的配置信息
+     */
     private void init() {
+
         String env = ConfigurationManager.getConfigInstance().getString(
                 EUREKA_ENVIRONMENT, TEST);
         ConfigurationManager.getConfigInstance().setProperty(
@@ -469,14 +471,15 @@ public class DefaultEurekaServerConfig implements EurekaServerConfig {
      * Expects a property with name: [eureka-namespace].remoteRegionUrlsWithName and a value being a comma separated
      * list of region name & remote url pairs, separated with a ";". <br/>
      * So, if you wish to specify two regions with name region1 & region2, the property value will be:
-     <PRE>
-     eureka.remoteRegionUrlsWithName=region1;http://region1host/eureka/v2,region2;http://region2host/eureka/v2
-     </PRE>
+     * <PRE>
+     * eureka.remoteRegionUrlsWithName=region1;http://region1host/eureka/v2,region2;http://region2host/eureka/v2
+     * </PRE>
      * The above property will result in the following map:
-     <PRE>
-     region1->"http://region1host/eureka/v2"
-     region2->"http://region2host/eureka/v2"
-     </PRE>
+     * <PRE>
+     * region1->"http://region1host/eureka/v2"
+     * region2->"http://region2host/eureka/v2"
+     * </PRE>
+     *
      * @return A map of region name to remote region URL parsed from the property specified above. If there is no
      * property available, then an empty map is returned.
      */
